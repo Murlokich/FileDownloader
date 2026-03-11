@@ -13,6 +13,15 @@ fun main(args: Array<String>) {
     }
     
     val url = args[0]
+    
+    // Validate URL
+    if (!isValidUrl(url)) {
+        println("Error: Invalid URL or unsupported protocol")
+        println("URL must start with http:// or https://")
+        println("You provided: $url")
+        return
+    }
+    
     println("Downloading: $url")
 }
 

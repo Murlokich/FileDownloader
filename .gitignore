@@ -18,6 +18,10 @@
 *.zip
 *.tar.gz
 
+# Exceptions: Keep gradle wrapper files
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
 # virtual machine crash logs
 hs_err_pid*
 replay_pid*
