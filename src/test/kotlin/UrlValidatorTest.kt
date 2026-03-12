@@ -7,43 +7,43 @@ import org.junit.Assert.assertFalse
 
 class UrlValidatorTest {
     @Test
-    fun `valid HTTPS URL`() {
+    fun validHttpsUrl() {
         assertTrue(isValidUrl("https://example.com/file.zip"))
     }
     @Test
-    fun `valid HTTP URL`() {
+    fun validHttpUrl() {
         assertTrue(isValidUrl("http://example.com/file.zip"))
     }
     @Test
-    fun `valid HTTPS URL with query parameters`() {
+    fun validUrlWithQueryParams() {
         assertTrue(isValidUrl("https://example.com/file.zip?key=value"))
     }
     @Test
-    fun `valid HTTPS URL with custom port`() {
+    fun validUrlWithCustomPort() {
         assertTrue(isValidUrl("https://example.com:8080/file.zip"))
     }
     @Test
-    fun `invalid URL - missing protocol`() {
+    fun invalidMissingProtocol() {
         assertFalse(isValidUrl("example.com/file.zip"))
     }
     @Test
-    fun `invalid URL - FTP protocol`() {
+    fun invalidFtpProtocol() {
         assertFalse(isValidUrl("ftp://example.com/file.zip"))
     }
     @Test
-    fun `invalid URL - completely malformed`() {
+    fun invalidMalformedUrl() {
         assertFalse(isValidUrl("not a url"))
     }
     @Test
-    fun `invalid URL - empty string`() {
+    fun invalidEmptyString() {
         assertFalse(isValidUrl(""))
     }
     @Test
-    fun `invalid URL - only protocol`() {
+    fun invalidOnlyProtocol() {
         assertFalse(isValidUrl("https://"))
     }
     @Test
-    fun `invalid URL - FILE protocol`() {
+    fun invalidFileProtocol() {
         assertFalse(isValidUrl("file:///home/user/file.zip"))
     }
 }
