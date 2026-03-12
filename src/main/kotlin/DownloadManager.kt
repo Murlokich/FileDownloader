@@ -7,10 +7,21 @@ import java.io.IOException
  */
 class ServerCapabilityException(message: String) : Exception(message)
 
+
 /**
  * Manages file downloads from provided URLs.
  */
-class DownloadManager {
+class DownloadManager(
+    private val chunks: Int = DEFAULT_CHUNKS
+) {
+
+    init {
+        require(chunks > 0) { "chunks must be > 0" }
+    }
+
+    companion object {
+        private const val DEFAULT_CHUNKS = 3
+    }
 
     private val httpClient = HttpClient()
 
@@ -42,6 +53,35 @@ class DownloadManager {
                 "Server did not provide content-length or content-length is invalid: ${headMeta.contentLength}"
             )
         }
+    }
+
+    /**
+     * Splits [contentLength] into [chunks] inclusive byte ranges.
+     *
+     * The last range absorbs the remainder so the final end is always contentLength - 1.
+     */
+    fun splitIntoRanges(contentLength: Long): Array<ByteRange> {
+        require(contentLength > 0) { "contentLength must be > 0" }
+        require(contentLength >= chunks) {
+            "contentLength must be >= chunks to produce non-empty ranges"
+        }
+
+        val chunkSize = contentLength / chunks
+        val ranges = Array(chunks) { ByteRange(0, 0) }
+        var start = 0L
+
+        for (index in 0 until chunks) {
+            val end = if (index == chunks - 1) {
+                contentLength - 1
+            } else {
+                start + chunkSize - 1
+            }
+
+            ranges[index] = ByteRange(start = start, end = end)
+            start = end + 1
+        }
+
+        return ranges
     }
 
     /**

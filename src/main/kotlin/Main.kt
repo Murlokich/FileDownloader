@@ -1,27 +1,41 @@
 package main.kotlin
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.validate
+import com.github.ajalt.clikt.parameters.types.int
+
+private const val DEFAULT_CHUNKS = 3
+
+private class DownloadCommand : CliktCommand(
+    name = "FileDownloader",
+    help = "Parallel file downloader"
+) {
+    private val chunks by option("-c", "--chunks", help = "Number of chunks for parallel download")
+        .int()
+        .default(DEFAULT_CHUNKS)
+        .validate { value -> require(value > 0) { "Chunks must be a positive integer" } }
+
+    private val url by argument(help = "URL to download")
+
+    override fun run() {
+        if (!isValidUrl(url)) {
+            echo("Error: Invalid URL or unsupported protocol")
+            echo("URL must start with http:// or https://")
+            echo("You provided: $url")
+            return
+        }
+
+        DownloadManager(chunks = chunks).downloadFile(url)
+    }
+}
+
 /**
  * Simple CLI application for parallel file downloader.
- * Takes exactly one argument: the URL to download.
+ * Accepts exactly one URL and optional chunk count.
  */
 fun main(args: Array<String>) {
-    // Enforce exactly one argument
-    if (args.size != 1) {
-        println("Error: Expected exactly 1 argument, got ${args.size}")
-        println("Usage: java -jar FileDownloader.jar <url>")
-        println("Example: java -jar FileDownloader.jar https://example.com/file.zip")
-        return
-    }
-
-    val url = args[0]
-
-    // Validate URL
-    if (!isValidUrl(url)) {
-        println("Error: Invalid URL or unsupported protocol")
-        println("URL must start with http:// or https://")
-        println("You provided: $url")
-        return
-    }
-
-    DownloadManager().downloadFile(url)
+    DownloadCommand().main(args)
 }
