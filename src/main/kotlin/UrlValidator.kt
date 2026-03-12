@@ -1,3 +1,5 @@
+package main.kotlin
+
 import java.net.URI
 
 /**
@@ -12,4 +14,3 @@ fun isValidUrl(urlString: String): Boolean {
         false
     }
 }
-

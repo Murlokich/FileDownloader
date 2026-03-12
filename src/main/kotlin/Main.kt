@@ -1,3 +1,5 @@
+package main.kotlin
+
 /**
  * Simple CLI application for parallel file downloader.
  * Takes exactly one argument: the URL to download.
@@ -24,4 +26,3 @@ fun main(args: Array<String>) {
     
     println("Downloading: $url")
 }
-

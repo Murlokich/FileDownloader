@@ -1,6 +1,10 @@
+package test.kotlin
+
+import main.kotlin.isValidUrl
 import org.junit.Test
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+
 class UrlValidatorTest {
     @Test
     fun `valid HTTPS URL`() {
