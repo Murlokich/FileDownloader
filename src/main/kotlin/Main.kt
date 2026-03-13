@@ -39,7 +39,7 @@ private class DownloadCommand : CliktCommand(
 }
 
 /**
- * Simple CLI application for parallel file downloader.
+ * Simple CLI application for file downloading.
  * Accepts exactly one URL and optional chunk count.
  */
 fun main(args: Array<String>) {
