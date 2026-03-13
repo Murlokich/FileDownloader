@@ -1,5 +1,9 @@
 package main.kotlin
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 
 /**
@@ -92,14 +96,46 @@ class DownloadManager(
     fun downloadFile(url: String) {
         println("Downloading from: $url")
 
-        try {
-            val headMeta = httpClient.getHeadMeta(url)
-            validateHeadMeta(headMeta)
+        val headMeta = httpClient.getHeadMeta(url)
+        validateHeadMeta(headMeta)
+        val contentLength = headMeta.contentLength
 
-            println("Source is valid for download")
-            println("Content-Length: ${headMeta.contentLength} bytes")
-        } catch (error: Exception) {
-            println("Error: ${error.message}")
+        val ranges = splitIntoRanges(contentLength)
+        val downloadedBytes = ByteArray(contentLength.toInt())
+
+        downloadChunks(url, ranges, downloadedBytes)
+
+        println("Source is valid for download")
+        println("Content-Length: ${headMeta.contentLength} bytes")
+        println("Downloaded ${downloadedBytes.size} bytes in ${ranges.size} chunks")
+    }
+
+    /**
+     * Downloads all [ranges] concurrently and writes each chunk directly into [destination].
+     */
+    private fun downloadChunks(url: String, ranges: Array<ByteRange>, destination: ByteArray) = runBlocking {
+        val chunkJobs = ranges.map { range ->
+            async(Dispatchers.IO) {
+                val chunkBytes = httpClient.getBytesInRange(url, range)
+                val expectedChunkSize = (range.end - range.start + 1).toInt()
+                if (chunkBytes.size != expectedChunkSize) {
+                    throw IllegalStateException(
+                        "Range ${range.start}-${range.end} returned ${chunkBytes.size} bytes " +
+                            "instead of $expectedChunkSize"
+                    )
+                }
+
+                System.arraycopy(
+                    chunkBytes,
+                    0,
+                    destination,
+                    range.start.toInt(),
+                    chunkBytes.size
+                )
+            }
         }
+
+        chunkJobs.awaitAll()
     }
 }
+

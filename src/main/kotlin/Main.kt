@@ -28,7 +28,11 @@ private class DownloadCommand : CliktCommand(
             return
         }
 
-        DownloadManager(chunks = chunks).downloadFile(url)
+        try {
+            DownloadManager(chunks = chunks).downloadFile(url)
+        } catch (error: Exception) {
+            echo("Error: ${error.message}")
+        }
     }
 }
 
