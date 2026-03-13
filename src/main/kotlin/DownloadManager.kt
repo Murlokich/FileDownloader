@@ -5,6 +5,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Thrown when server metadata does not satisfy downloader requirements.
@@ -105,9 +109,18 @@ class DownloadManager(
 
         downloadChunks(url, ranges, downloadedBytes)
 
+        val outputPath = resolveOutputPath(url)
+        Files.write(outputPath, downloadedBytes)
+
         println("Source is valid for download")
         println("Content-Length: ${headMeta.contentLength} bytes")
         println("Downloaded ${downloadedBytes.size} bytes in ${ranges.size} chunks")
+        println("Saved to: ${outputPath.toAbsolutePath()}")
+    }
+
+    private fun resolveOutputPath(url: String): Path {
+        val fileName = URI(url).path.substringAfterLast('/').ifBlank { "download.bin" }
+        return Paths.get(fileName)
     }
 
     /**
