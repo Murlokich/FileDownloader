@@ -5,11 +5,11 @@ import main.kotlin.DownloadManager
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 
-class DownloadManagerTest {
+class DownloadManagerSplitIntoRangesTest {
 
     @Test
     fun splitIntoRangesWhenDivisible() {
-        val manager = DownloadManager(chunks = 3)
+        val manager = DownloadManager()
 
         val ranges = manager.splitIntoRanges(contentLength = 12)
 
@@ -25,14 +25,15 @@ class DownloadManagerTest {
 
     @Test
     fun splitIntoRangesWhenNotDivisible() {
-        val manager = DownloadManager(chunks = 3)
+        val manager = DownloadManager(chunks = 4)
 
         val ranges = manager.splitIntoRanges(contentLength = 10)
 
         assertArrayEquals(
             arrayOf(
-                ByteRange(0, 2),
-                ByteRange(3, 5),
+                ByteRange(0, 1),
+                ByteRange(2, 3),
+                ByteRange(4, 5),
                 ByteRange(6, 9)
             ),
             ranges
@@ -41,7 +42,7 @@ class DownloadManagerTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun splitIntoRangesRejectsContentLengthLessThanChunks() {
-        val manager = DownloadManager(chunks = 3)
+        val manager = DownloadManager()
         manager.splitIntoRanges(contentLength = 2)
     }
 }
