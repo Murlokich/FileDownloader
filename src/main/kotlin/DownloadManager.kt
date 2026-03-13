@@ -1,9 +1,8 @@
 package main.kotlin
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import main.kotlin.downloader.FileDownloader
+import main.kotlin.downloader.ParallelFileDownloader
+import main.kotlin.downloader.SingleChunkFileDownloader
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
@@ -78,85 +77,29 @@ class DownloadManager(
         if (!isParallelDownloadSupported) {
             chunks = NON_PARALLEL_CHUNKS
         }
-        chunks = minOf(chunks.toLong(), contentLength).toInt()
 
-        val downloadedBytes = if (chunks == NON_PARALLEL_CHUNKS) {
-            httpClient.getFullBytes(url)
+        val chunksToUse = minOf(chunks.toLong(), contentLength).toInt()
+
+        val downloader: FileDownloader = if (chunksToUse == NON_PARALLEL_CHUNKS) {
+            SingleChunkFileDownloader(httpClient, url)
         } else {
-            val ranges = splitIntoRanges(contentLength, chunks)
-            val bytes = ByteArray(contentLength.toInt())
-            downloadChunks(url, ranges, bytes)
-            bytes
+            ParallelFileDownloader(httpClient, url, chunksToUse, contentLength)
         }
+
+        val downloadedBytes = downloader.download()
 
         val outputPath = resolveOutputPath(url)
         Files.write(outputPath, downloadedBytes)
 
         println("Source is valid for download")
         println("Content-Length: ${headMeta.contentLength} bytes")
-        println("Downloaded ${downloadedBytes.size} bytes in $chunks chunks")
+        println("Downloaded ${downloadedBytes.size} bytes in $chunksToUse chunks")
         println("Saved to: ${outputPath.toAbsolutePath()}")
     }
 
     private fun resolveOutputPath(url: String): Path {
         val fileName = URI(url).path.substringAfterLast('/').ifBlank { "download.bin" }
         return Paths.get(fileName)
-    }
-
-    fun splitIntoRanges(contentLength: Long): Array<ByteRange> {
-        return splitIntoRanges(contentLength, chunks)
-    }
-
-    private fun splitIntoRanges(contentLength: Long, chunkCount: Int): Array<ByteRange> {
-        require(contentLength > 0) { "contentLength must be > 0" }
-        require(contentLength >= chunkCount) {
-            "contentLength must be >= chunkCount to produce non-empty ranges"
-        }
-
-        val chunkSize = contentLength / chunkCount
-        val ranges = Array(chunkCount) { ByteRange(0, 0) }
-        var start = 0L
-
-        for (index in 0 until chunkCount) {
-            val end = if (index == chunkCount - 1) {
-                contentLength - 1
-            } else {
-                start + chunkSize - 1
-            }
-
-            ranges[index] = ByteRange(start = start, end = end)
-            start = end + 1
-        }
-
-        return ranges
-    }
-
-    /**
-     * Downloads all [ranges] concurrently and writes each chunk directly into [destination].
-     */
-    private fun downloadChunks(url: String, ranges: Array<ByteRange>, destination: ByteArray) = runBlocking {
-        val chunkJobs = ranges.map { range ->
-            async(Dispatchers.IO) {
-                val chunkBytes = httpClient.getBytesInRange(url, range)
-                val expectedChunkSize = (range.end - range.start + 1).toInt()
-                if (chunkBytes.size != expectedChunkSize) {
-                    throw IllegalStateException(
-                        "Range ${range.start}-${range.end} returned ${chunkBytes.size} bytes " +
-                            "instead of $expectedChunkSize"
-                    )
-                }
-
-                System.arraycopy(
-                    chunkBytes,
-                    0,
-                    destination,
-                    range.start.toInt(),
-                    chunkBytes.size
-                )
-            }
-        }
-
-        chunkJobs.awaitAll()
     }
 }
 

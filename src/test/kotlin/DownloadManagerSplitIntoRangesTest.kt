@@ -1,7 +1,8 @@
 package test.kotlin
 
 import main.kotlin.ByteRange
-import main.kotlin.DownloadManager
+import main.kotlin.HttpClient
+import main.kotlin.downloader.ParallelFileDownloader
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 
@@ -9,9 +10,9 @@ class DownloadManagerSplitIntoRangesTest {
 
     @Test
     fun splitIntoRangesWhenDivisible() {
-        val manager = DownloadManager(chunks = 3)
+        val downloader = ParallelFileDownloader(HttpClient(), url = "http://example.com/file", chunks = 3, contentLength = 12)
 
-        val ranges = manager.splitIntoRanges(contentLength = 12)
+        val ranges = downloader.splitIntoRanges(contentLength = 12)
 
         assertArrayEquals(
             arrayOf(
@@ -25,9 +26,9 @@ class DownloadManagerSplitIntoRangesTest {
 
     @Test
     fun splitIntoRangesWhenNotDivisible() {
-        val manager = DownloadManager(chunks = 4)
+        val downloader = ParallelFileDownloader(HttpClient(), url = "http://example.com/file", chunks = 4, contentLength = 10)
 
-        val ranges = manager.splitIntoRanges(contentLength = 10)
+        val ranges = downloader.splitIntoRanges(contentLength = 10)
 
         assertArrayEquals(
             arrayOf(
@@ -42,8 +43,8 @@ class DownloadManagerSplitIntoRangesTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun splitIntoRangesRejectsContentLengthLessThanChunks() {
-        val manager = DownloadManager(chunks = 3)
-        manager.splitIntoRanges(contentLength = 2)
+        val downloader = ParallelFileDownloader(HttpClient(), url = "http://example.com/file", chunks = 3, contentLength = 2)
+        downloader.splitIntoRanges(contentLength = 2)
     }
 }
 

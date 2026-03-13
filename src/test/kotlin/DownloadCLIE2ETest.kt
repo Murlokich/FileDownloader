@@ -19,7 +19,7 @@ class DownloadCLIE2ETest {
     val tempFolder = TemporaryFolder()
 
     @Test
-    fun cliDownloadsFileEndToEnd() {
+    fun parallelHappyPath() {
         // Prepare temporary directory
         val outputDir = tempFolder.newFolder("downloads")
         val expectedBytes = payload

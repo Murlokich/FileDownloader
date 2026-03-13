@@ -76,7 +76,7 @@ class HttpClient {
             connection.connect()
 
             val responseCode = connection.responseCode
-            if (responseCode !in setOf(200, 206)) {
+            if (responseCode != 206) {
                 throw IOException("GET range request failed with HTTP $responseCode ${connection.responseMessage}")
             }
 
