@@ -28,7 +28,7 @@ class DownloadManager(
     }
 
     companion object {
-        private const val DEFAULT_CHUNKS = 3
+        const val DEFAULT_CHUNKS = 3
     }
 
     private val httpClient = HttpClient()

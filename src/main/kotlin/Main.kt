@@ -7,15 +7,13 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
 
-private const val DEFAULT_CHUNKS = 3
-
 private class DownloadCommand : CliktCommand(
     name = "FileDownloader",
     help = "Parallel file downloader"
 ) {
     private val chunks by option("-c", "--chunks", help = "Number of chunks for parallel download")
         .int()
-        .default(DEFAULT_CHUNKS)
+        .default(DownloadManager.DEFAULT_CHUNKS)
         .validate { value -> require(value > 0) { "Chunks must be a positive integer" } }
 
     private val url by argument(help = "URL to download")
