@@ -16,7 +16,7 @@ private class DownloadCommand : CliktCommand(
 ) {
     private val chunks by option("-c", "--chunks", help = "Number of chunks for parallel download")
         .int()
-        .default(DownloadManager.DEFAULT_CHUNKS)
+        .default(DownloadManager.NON_PARALLEL_CHUNKS)
         .validate { value -> require(value > 0) { "Chunks must be a positive integer" } }
 
     private val url by argument(help = "URL to download")

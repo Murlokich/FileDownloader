@@ -9,7 +9,7 @@ class DownloadManagerSplitIntoRangesTest {
 
     @Test
     fun splitIntoRangesWhenDivisible() {
-        val manager = DownloadManager()
+        val manager = DownloadManager(chunks = 3)
 
         val ranges = manager.splitIntoRanges(contentLength = 12)
 
@@ -42,7 +42,7 @@ class DownloadManagerSplitIntoRangesTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun splitIntoRangesRejectsContentLengthLessThanChunks() {
-        val manager = DownloadManager()
+        val manager = DownloadManager(chunks = 3)
         manager.splitIntoRanges(contentLength = 2)
     }
 }

@@ -2,14 +2,14 @@ package test.kotlin
 
 import main.kotlin.DownloadManager
 import main.kotlin.HeadMeta
-import main.kotlin.ServerCapabilityException
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.IOException
 
-class DownloadManagerValidateHeadMetaTest {
+class DownloadManagerProcessHeadMetaTest {
 
     @Test
-    fun validateHeadMetaAcceptsValidMetadata() {
+    fun processHeadMetaAcceptsValidMetadata() {
         val manager = DownloadManager()
         val meta = HeadMeta(
             statusCode = 200,
@@ -18,11 +18,12 @@ class DownloadManagerValidateHeadMetaTest {
             contentLength = 42
         )
 
-        manager.validateHeadMeta(meta)
+        val isParallelSupported = manager.processHeadMeta(meta)
+        assertEquals(DownloadManager.PARALLEL_DOWNLOAD_SUPPORTED, isParallelSupported)
     }
 
     @Test(expected = IOException::class)
-    fun validateHeadMetaRejectsNonSuccessStatus() {
+    fun processHeadMetaRejectsNonSuccessStatus() {
         val manager = DownloadManager()
         val meta = HeadMeta(
             statusCode = 404,
@@ -31,11 +32,11 @@ class DownloadManagerValidateHeadMetaTest {
             contentLength = -1
         )
 
-        manager.validateHeadMeta(meta)
+        manager.processHeadMeta(meta)
     }
 
-    @Test(expected = ServerCapabilityException::class)
-    fun validateHeadMetaRejectsMissingByteRangesSupport() {
+    @Test
+    fun processHeadMetaFallsBackToSingleChunkWhenByteRangesUnsupported() {
         val manager = DownloadManager()
         val meta = HeadMeta(
             statusCode = 200,
@@ -44,11 +45,12 @@ class DownloadManagerValidateHeadMetaTest {
             contentLength = 42
         )
 
-        manager.validateHeadMeta(meta)
+        val isParallelSupported = manager.processHeadMeta(meta)
+        assertEquals(DownloadManager.PARALLEL_DOWNLOAD_NOT_SUPPORTED, isParallelSupported)
     }
 
     @Test(expected = IllegalStateException::class)
-    fun validateHeadMetaRejectsNonPositiveContentLength() {
+    fun processHeadMetaRejectsNonPositiveContentLength() {
         val manager = DownloadManager()
         val meta = HeadMeta(
             statusCode = 200,
@@ -57,7 +59,7 @@ class DownloadManagerValidateHeadMetaTest {
             contentLength = 0
         )
 
-        manager.validateHeadMeta(meta)
+        manager.processHeadMeta(meta)
     }
 }
 

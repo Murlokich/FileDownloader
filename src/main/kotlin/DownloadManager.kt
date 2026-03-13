@@ -11,16 +11,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Thrown when server metadata does not satisfy downloader requirements.
- */
-class ServerCapabilityException(message: String) : Exception(message)
-
-
-/**
  * Manages file downloads from provided URLs.
  */
 class DownloadManager(
-    private val chunks: Int = DEFAULT_CHUNKS
+    private var chunks: Int = NON_PARALLEL_CHUNKS
 ) {
 
     init {
@@ -28,20 +22,22 @@ class DownloadManager(
     }
 
     companion object {
-        const val DEFAULT_CHUNKS = 3
+        const val NON_PARALLEL_CHUNKS = 1
+        const val PARALLEL_DOWNLOAD_SUPPORTED = true
+        const val PARALLEL_DOWNLOAD_NOT_SUPPORTED = false
     }
 
     private val httpClient = HttpClient()
 
     /**
-     * Validates whether downloading from this source is supported.
+     * Checks whether downloading from this source is supported and in what mode
      *
      * @param headMeta Metadata returned from HEAD request
+     * @return Whether server supports parallel (range-based) download
      * @throws IOException if HTTP status is not successful
-     * @throws ServerCapabilityException if byte ranges are not supported
      * @throws IllegalStateException if content length is invalid
      */
-    fun validateHeadMeta(headMeta: HeadMeta) {
+    fun processHeadMeta(headMeta: HeadMeta): Boolean {
         if (headMeta.statusCode != 200) {
             throw IOException(
                 "Failed to get required data from the server. HTTP " +
@@ -51,9 +47,11 @@ class DownloadManager(
 
         val acceptRanges = headMeta.acceptRanges?.trim()?.lowercase()
         if (acceptRanges != "bytes") {
-            throw ServerCapabilityException(
-                "Server does not support byte ranges. Accept-Ranges: ${headMeta.acceptRanges ?: "<missing>"}"
+            println(
+                "Warning: server does not support byte ranges (Accept-Ranges: " +
+                    "${headMeta.acceptRanges ?: "<missing>"}). Falling back to single-chunk download."
             )
+            return PARALLEL_DOWNLOAD_NOT_SUPPORTED
         }
 
         if (headMeta.contentLength <= 0) {
@@ -61,35 +59,8 @@ class DownloadManager(
                 "Server did not provide content-length or content-length is invalid: ${headMeta.contentLength}"
             )
         }
-    }
 
-    /**
-     * Splits [contentLength] into [chunks] inclusive byte ranges.
-     *
-     * The last range absorbs the remainder so the final end is always contentLength - 1.
-     */
-    fun splitIntoRanges(contentLength: Long): Array<ByteRange> {
-        require(contentLength > 0) { "contentLength must be > 0" }
-        require(contentLength >= chunks) {
-            "contentLength must be >= chunks to produce non-empty ranges"
-        }
-
-        val chunkSize = contentLength / chunks
-        val ranges = Array(chunks) { ByteRange(0, 0) }
-        var start = 0L
-
-        for (index in 0 until chunks) {
-            val end = if (index == chunks - 1) {
-                contentLength - 1
-            } else {
-                start + chunkSize - 1
-            }
-
-            ranges[index] = ByteRange(start = start, end = end)
-            start = end + 1
-        }
-
-        return ranges
+        return PARALLEL_DOWNLOAD_SUPPORTED
     }
 
     /**
@@ -101,26 +72,63 @@ class DownloadManager(
         println("Downloading from: $url")
 
         val headMeta = httpClient.getHeadMeta(url)
-        validateHeadMeta(headMeta)
+        val isParallelDownloadSupported = processHeadMeta(headMeta)
         val contentLength = headMeta.contentLength
 
-        val ranges = splitIntoRanges(contentLength)
-        val downloadedBytes = ByteArray(contentLength.toInt())
+        if (!isParallelDownloadSupported) {
+            chunks = NON_PARALLEL_CHUNKS
+        }
+        chunks = minOf(chunks.toLong(), contentLength).toInt()
 
-        downloadChunks(url, ranges, downloadedBytes)
+        val downloadedBytes = if (chunks == NON_PARALLEL_CHUNKS) {
+            httpClient.getFullBytes(url)
+        } else {
+            val ranges = splitIntoRanges(contentLength, chunks)
+            val bytes = ByteArray(contentLength.toInt())
+            downloadChunks(url, ranges, bytes)
+            bytes
+        }
 
         val outputPath = resolveOutputPath(url)
         Files.write(outputPath, downloadedBytes)
 
         println("Source is valid for download")
         println("Content-Length: ${headMeta.contentLength} bytes")
-        println("Downloaded ${downloadedBytes.size} bytes in ${ranges.size} chunks")
+        println("Downloaded ${downloadedBytes.size} bytes in $chunks chunks")
         println("Saved to: ${outputPath.toAbsolutePath()}")
     }
 
     private fun resolveOutputPath(url: String): Path {
         val fileName = URI(url).path.substringAfterLast('/').ifBlank { "download.bin" }
         return Paths.get(fileName)
+    }
+
+    fun splitIntoRanges(contentLength: Long): Array<ByteRange> {
+        return splitIntoRanges(contentLength, chunks)
+    }
+
+    private fun splitIntoRanges(contentLength: Long, chunkCount: Int): Array<ByteRange> {
+        require(contentLength > 0) { "contentLength must be > 0" }
+        require(contentLength >= chunkCount) {
+            "contentLength must be >= chunkCount to produce non-empty ranges"
+        }
+
+        val chunkSize = contentLength / chunkCount
+        val ranges = Array(chunkCount) { ByteRange(0, 0) }
+        var start = 0L
+
+        for (index in 0 until chunkCount) {
+            val end = if (index == chunkCount - 1) {
+                contentLength - 1
+            } else {
+                start + chunkSize - 1
+            }
+
+            ranges[index] = ByteRange(start = start, end = end)
+            start = end + 1
+        }
+
+        return ranges
     }
 
     /**

@@ -85,4 +85,30 @@ class HttpClient {
             connection?.disconnect()
         }
     }
+
+    /**
+     * Sends a regular GET request and returns the full response body bytes.
+     *
+     * @param url The URL to request
+     * @return Full response body bytes
+     * @throws IOException if server response is unsuccessful
+     */
+    fun getFullBytes(url: String): ByteArray {
+        var connection: HttpURLConnection? = null
+
+        try {
+            connection = URI(url).toURL().openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connect()
+
+            val responseCode = connection.responseCode
+            if (responseCode != 200) {
+                throw IOException("GET request failed with HTTP $responseCode ${connection.responseMessage}")
+            }
+
+            return connection.inputStream.use { it.readBytes() }
+        } finally {
+            connection?.disconnect()
+        }
+    }
 }
