@@ -1,11 +1,14 @@
 package main.kotlin
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.int
+
+private const val EXIT_FAILURE = 1
 
 private class DownloadCommand : CliktCommand(
     name = "FileDownloader",
@@ -20,16 +23,17 @@ private class DownloadCommand : CliktCommand(
 
     override fun run() {
         if (!isValidUrl(url)) {
-            echo("Error: Invalid URL or unsupported protocol")
-            echo("URL must start with http:// or https://")
-            echo("You provided: $url")
-            return
+            echo("Error: Invalid URL or unsupported protocol", err = true)
+            echo("URL must start with http:// or https://", err = true)
+            echo("You provided: $url", err = true)
+            throw ProgramResult(EXIT_FAILURE)
         }
 
         try {
             DownloadManager(chunks = chunks).downloadFile(url)
         } catch (error: Exception) {
-            echo("Error: ${error.message}")
+            echo("Error: ${error.message}", err = true)
+            throw ProgramResult(EXIT_FAILURE)
         }
     }
 }
